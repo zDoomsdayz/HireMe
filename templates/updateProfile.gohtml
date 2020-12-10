@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Update Profile</title>
+
+    <script type="text/javascript">
+    function getValue(x) {
+        if(x.value == 'No'){
+            document.getElementById("info").style.display = 'none';
+        }
+        else{
+            document.getElementById("info").style.display = 'block';
+        }
+    }
+    </script>
+</head>
+<body>
+<h1>Update Profile</h1>
+<h3>Fill up the form to plot on the map</h3>
+<form method="post">
+
+    <label>Are you looking for a job: </label>
+    <input type="radio" name="options" value="Yes" onChange="getValue(this)" required>Yes
+    <input type="radio" name="options" value="No" onChange="getValue(this)" required>No<br><br>
+
+
+    <div id="info" style="display:none;"> 
+        <label for ="postal">Postal Code:</label>
+        <input type="text" name="postal" placeholder="postal code" pattern="\d+"><br><br>
+
+        <label> Looking For:</label><br>
+        {{range .Type}}
+            <input type="checkbox" name="Type" value="{{.}}">
+            <label for="{{.}}"> {{.}}</label><br>
+        {{end}}<br>
+
+        <label> Skills:</label><br>
+        {{range .Category}}
+            <input type="checkbox" name="Category" value="{{.}}">
+            <label for="{{.}}"> {{.}}</label><br>
+        {{end}}<br>
+
+        <label for ="exp">Years Of Experience:</label>
+        <input type="text" name="exp" placeholder="Years Of Experience" pattern="\d+"><br><br>
+
+        <label for="lastDay">Unemployed Since:</label>
+        <input type="date" name="lastDay"><br><br>
+
+        <label>Message : </label><br>
+        <textarea name="message" rows="4" cols="50" maxlength="50"></textarea><br>
+
+        <label for ="email">E-mail:</label>
+        <input type="text" name="email" placeholder="E-mail"><br><br>
+    </div>
+
+    <input type="submit">
+</form>
+</body>
+</html>

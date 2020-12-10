@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>HireMe</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
+    <script
+      src="https://maps.googleapis.com/maps/api/js?key={{.GoogleAPI}}&map_ids={{.GoogleMapID}}&callback=initMap&libraries=&v=weekly"
+      defer
+    ></script>
+    <style type="text/css">
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+
+      #test {
+        position: absolute;
+        z-index: 10;
+        border-right: 1px solid black;
+        width: 300px;
+        height: 100%;
+        background-color: #ededed;
+      }
+
+      /* Optional: Makes the sample page fill the window. */
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+    <script>
+      let map;
+
+      function initMap() {
+        map = new google.maps.Map(document.getElementById("map"), {
+          center: { lat: 1.3521, lng: 103.8198 },
+          zoom: 12,
+          mapId: '{{.GoogleMapID}}',
+          options: {disableDefaultUI: true, zoomControl: true}
+        });
+        
+        {{range .AllUser}}
+          addMarker({
+            coords:{lat:{{.CoordX}},lng:{{.CoordY}}}, 
+            content:'Looking For: {{.JobType}}<br>Skill: {{.Skill}}<br>Years of Experience: {{.Exp}}<br>Unemployed Since: {{.UnemployedDate}}<br>Message: {{.Message}}<br>Email: {{.Email}}',
+            {{if eq .Username $.MyUser.Username}}
+              iconImage:'https://cdn.discordapp.com/emojis/785888573328457728.png?v=1'
+            {{else}}
+              iconImage:'https://cdn.discordapp.com/emojis/785883192539217961.png?v=1'
+            {{end}}
+          });
+        {{end}}
+      }
+
+      function addMarker(props){
+        var marker = new google.maps.Marker({
+          position: props.coords,
+          map: map,
+          icon: {
+            scaledSize: new google.maps.Size(30, 30),
+            url: props.iconImage 
+          },
+        });
+
+        if(props.content){
+          var infoWindow = new google.maps.InfoWindow({
+            content:props.content
+          });
+
+          marker.addListener('click', function(){
+            infoWindow.open(map, marker)
+          });
+        }
+      }
+    </script>
+  </head>
+  <body>
+
+  <form method="GET">
+    <div id="test">
+    {{if (ne .MyUser.Username "")}}
+      <h3><a href="/updateProfile">Update Profile</a></h3>
+      <h3><a href="/logout">Logout</a></h3>
+    {{else}}
+      <h3><a href="/signup">Sign Up</a></h3>
+      <h3><a href="/login">Log in</a></h3>
+    {{end}}
+
+    <label> Looking For:</label><br>
+    {{range .Type}}
+        <input type="checkbox" name="Type" value="{{.}}">
+        <label for="{{.}}"> {{.}}</label><br>
+    {{end}}<br>
+
+    <label> Skills:</label><br>
+    {{range .Category}}
+        <input type="checkbox" name="Category" value="{{.}}">
+        <label for="{{.}}"> {{.}}</label><br>
+    {{end}}<br>
+
+    <label for ="exp">Minimum Years of Experience:</label>
+    <input type="text" name="exp"><br><br>
+
+    <label> Unemployed more than:</label><br>
+    <input type="radio" name="uDays" value="30">30 Days<br>
+    <input type="radio" name="uDays" value="60">60 Days<br>
+    <input type="radio" name="uDays" value="90">90 Days<br><br>
+
+    <label for ="keyword">Keyword:</label>
+    <input type="text" name="keyword" placeholder="Search Keyword"><br><br>
+
+    <input type="submit" value="Apply">
+
+    </div>
+  </form>
+
+  <div id="map"></div>
+
+  </body>
+</html>
