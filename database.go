@@ -91,7 +91,7 @@ func GetUser() map[string]User {
 		if err != nil {
 			panic(err.Error)
 		}
-		users[user.Username] = User{user.Username, user.Password, user.Display, user.CoordX, user.CoordY, user.JobType, user.Skill, user.Exp, user.UnemployedDate, user.Message, user.Email}
+		users[user.Username] = user
 	}
 	return users
 }

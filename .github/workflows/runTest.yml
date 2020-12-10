@@ -1,0 +1,47 @@
+name: Go Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-16.04
+    steps:
+      - name: Check out Code
+        uses: actions/checkout@v2
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.13.7'
+      - name: Run version check
+        run: go version
+      - name: Install Dependencies
+        id: InstallDeps
+        run: |
+          go get github.com/tebeka/go2xunit
+      - if: ${{success()}}
+        run: |
+          go get github.com/franela/goblin
+      - if: ${{success()}}
+        name: Test Go Goblin
+        run: |
+          go test ./...
+          go test ./... | go2xunit > report.xml            
+      - if: ${{failure()}}
+        name: Create Issues
+        uses: nashmaniac/create-issue-action@v1.1
+        with:
+          title: Build Failed
+          token: ${{secrets.GITHUB_TOKEN}}
+          assignees: ${{github.actor}}
+          labels: worflow-failed
+          body: Workflow failed for commit ${{github.sha}} @ ${{github.ref}}        
+      - name: Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v1.5
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          files: report.xml
