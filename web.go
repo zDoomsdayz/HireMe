@@ -141,7 +141,7 @@ func index(res http.ResponseWriter, req *http.Request) {
 	if len(req.Form["Type"]) > 0 || len(req.Form["Category"]) > 0 || req.FormValue("exp") != "" || req.FormValue("uDays") != "" || req.FormValue("keyword") != "" {
 		if _, ok := mapHistory[myUser.Username]; ok {
 			currentTime := time.Now()
-			mapHistory[myUser.Username].Enqueue(queue.History{fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), "Filter: " + activity})
+			mapHistory[myUser.Username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Filter: " + activity})
 		}
 	}
 
@@ -176,7 +176,7 @@ func activity(res http.ResponseWriter, req *http.Request) {
 	allActivity := []queue.History{}
 
 	if _, ok := mapHistory[myUser.Username]; ok {
-		allActivity = mapHistory[myUser.Username].PrintAllNodes()
+		allActivity = mapHistory[myUser.Username].AllHistory()
 	}
 
 	tpl.ExecuteTemplate(res, "activity.gohtml", reverse(allActivity))
@@ -259,7 +259,7 @@ func updateProfile(res http.ResponseWriter, req *http.Request) {
 		}
 
 		currentTime := time.Now()
-		mapHistory[myUser.Username].Enqueue(queue.History{fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), "Updated Profile"})
+		mapHistory[myUser.Username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Updated Profile"})
 
 		// redirect to main index
 		http.Redirect(res, req, "/", http.StatusSeeOther)
@@ -351,7 +351,7 @@ func signup(res http.ResponseWriter, req *http.Request) {
 				mapHistory[username] = &queue.Queue{}
 			}
 			currentTime := time.Now()
-			mapHistory[username].Enqueue(queue.History{fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), "Sign up"})
+			mapHistory[username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Sign up"})
 			bPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
 			if err != nil {
 				http.Error(res, "Internal server error", http.StatusInternalServerError)
@@ -411,7 +411,7 @@ func login(res http.ResponseWriter, req *http.Request) {
 			mapHistory[username] = &queue.Queue{}
 		}
 		currentTime := time.Now()
-		mapHistory[username].Enqueue(queue.History{fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), "Login"})
+		mapHistory[username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Login"})
 
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
@@ -440,7 +440,7 @@ func logout(res http.ResponseWriter, req *http.Request) {
 	http.SetCookie(res, myCookie)
 
 	currentTime := time.Now()
-	mapHistory[myUser.Username].Enqueue(queue.History{fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), "Logout"})
+	mapHistory[myUser.Username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Logout"})
 
 	http.Redirect(res, req, "/", http.StatusSeeOther)
 }

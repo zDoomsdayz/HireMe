@@ -10,19 +10,21 @@ type History struct {
 	Activity string
 }
 
-type Node struct {
+type node struct {
 	item History
-	next *Node
+	next *node
 }
 
+// Queue struct
 type Queue struct {
-	front *Node
-	back  *Node
+	front *node
+	back  *node
 	size  int
 }
 
-func (p *Queue) Enqueue(h History) error {
-	newNode := &Node{
+// Enqueue add history to the back
+func (p *Queue) Enqueue(h History) {
+	newNode := &node{
 		item: h,
 		next: nil,
 	}
@@ -40,14 +42,14 @@ func (p *Queue) Enqueue(h History) error {
 	}
 	p.back = newNode
 	p.size++
-	return nil
 }
 
+// Dequeue remove histroy from the front
 func (p *Queue) Dequeue() (History, error) {
 	var item History
 
 	if p.front == nil {
-		return History{}, errors.New("Empty Queue!")
+		return History{}, errors.New("empty queue")
 	}
 
 	item = p.front.item
@@ -61,7 +63,8 @@ func (p *Queue) Dequeue() (History, error) {
 	return item, nil
 }
 
-func (p *Queue) PrintAllNodes() []History {
+// AllHistory return all of the history in slice
+func (p *Queue) AllHistory() []History {
 	currentNode := p.front
 
 	data := []History{}
