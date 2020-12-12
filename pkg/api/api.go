@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"encoding/json"
@@ -19,7 +19,7 @@ import (
 }*/
 
 // display all courses in JSON format
-func allUsers(res http.ResponseWriter, req *http.Request) {
+func AllUsers(res http.ResponseWriter, req *http.Request) {
 	/*if !validKey(req) {
 		res.WriteHeader(http.StatusNotFound)
 		res.Write([]byte("404 - invalid key!"))
@@ -30,7 +30,7 @@ func allUsers(res http.ResponseWriter, req *http.Request) {
 }
 
 // individual course which require GET PUT POST and DELETE method to access
-func user(res http.ResponseWriter, req *http.Request) {
+func User(res http.ResponseWriter, req *http.Request) {
 	/*if !validKey(req) {
 		res.WriteHeader(http.StatusNotFound)
 		res.Write([]byte("404 - invalid key!"))

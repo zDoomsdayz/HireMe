@@ -7,6 +7,7 @@ import (
 	"text/template"
 
 	"github.com/gorilla/mux"
+	"github.com/teojiahao/HireMe/pkg/api"
 )
 
 func init() {
@@ -22,8 +23,8 @@ func main() {
 	router.HandleFunc("/login", login)
 	router.HandleFunc("/logout", logout)
 
-	router.HandleFunc("/api/v1/users", allUsers)
-	router.HandleFunc("/api/v1/users/{username}", user).Methods("GET", "PUT", "POST", "DELETE")
+	router.HandleFunc("/api/v1/users", api.AllUsers)
+	router.HandleFunc("/api/v1/users/{username}", api.User).Methods("GET", "PUT", "POST", "DELETE")
 
 	fmt.Println("Listening at port 5000")
 	log.Fatal(http.ListenAndServeTLS(":5000", "cert/cert.pem", "cert/key.pem", router))
