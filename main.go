@@ -16,6 +16,7 @@ func init() {
 func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/", index)
+	router.HandleFunc("/activity", activity)
 	router.HandleFunc("/updateProfile", updateProfile)
 	router.HandleFunc("/signup", signup)
 	router.HandleFunc("/login", login)

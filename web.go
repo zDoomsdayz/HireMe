@@ -16,6 +16,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/teojiahao/HireMe/pkg/queue"
+
 	"github.com/joho/godotenv"
 	uuid "github.com/satori/go.uuid"
 	"github.com/teojiahao/HireMe/pkg/security"
@@ -29,6 +31,7 @@ var (
 	baseURL     string
 	jobType     []string
 	jobCategory []string
+	mapHistory  = map[string]*queue.Queue{}
 )
 
 // init load up env file
@@ -63,6 +66,7 @@ func index(res http.ResponseWriter, req *http.Request) {
 		fmt.Println(err)
 	}
 
+	activity := ""
 	req.ParseForm()
 	if len(req.Form["Type"]) > 0 {
 		jType := req.Form["Type"]
@@ -72,6 +76,7 @@ func index(res http.ResponseWriter, req *http.Request) {
 				delete(filterUser, k)
 			}
 		}
+		activity += strings.Join(jType, ", ") + " "
 	}
 
 	if len(req.Form["Category"]) > 0 {
@@ -82,6 +87,8 @@ func index(res http.ResponseWriter, req *http.Request) {
 				delete(filterUser, k)
 			}
 		}
+
+		activity += strings.Join(cat, ", ") + " "
 	}
 
 	if req.FormValue("exp") != "" {
@@ -92,6 +99,7 @@ func index(res http.ResponseWriter, req *http.Request) {
 				delete(filterUser, k)
 			}
 		}
+		activity += req.FormValue("exp") + "Years Of Exp "
 	}
 
 	if req.FormValue("uDays") != "" {
@@ -116,6 +124,7 @@ func index(res http.ResponseWriter, req *http.Request) {
 				}
 			}
 		}
+		activity += req.FormValue("uDays") + "Days unemployed"
 	}
 
 	if req.FormValue("keyword") != "" {
@@ -125,6 +134,14 @@ func index(res http.ResponseWriter, req *http.Request) {
 			if !strings.Contains(strings.ToLower(v.Message), strings.ToLower(keyword)) {
 				delete(filterUser, k)
 			}
+		}
+		activity += req.FormValue("keyword")
+	}
+
+	if len(req.Form["Type"]) > 0 || len(req.Form["Category"]) > 0 || req.FormValue("exp") != "" || req.FormValue("uDays") != "" || req.FormValue("keyword") != "" {
+		if _, ok := mapHistory[myUser.Username]; ok {
+			currentTime := time.Now()
+			mapHistory[myUser.Username].Enqueue(queue.History{fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), "Filter: " + activity})
 		}
 	}
 
@@ -145,6 +162,24 @@ func index(res http.ResponseWriter, req *http.Request) {
 	}
 
 	tpl.ExecuteTemplate(res, "index.gohtml", data)
+}
+
+func reverse(history []queue.History) []queue.History {
+	for i, j := 0, len(history)-1; i < j; i, j = i+1, j-1 {
+		history[i], history[j] = history[j], history[i]
+	}
+	return history
+}
+
+func activity(res http.ResponseWriter, req *http.Request) {
+	myUser := getUserFromCookie(res, req)
+	allActivity := []queue.History{}
+
+	if _, ok := mapHistory[myUser.Username]; ok {
+		allActivity = mapHistory[myUser.Username].PrintAllNodes()
+	}
+
+	tpl.ExecuteTemplate(res, "activity.gohtml", reverse(allActivity))
 }
 
 func updateProfile(res http.ResponseWriter, req *http.Request) {
@@ -222,6 +257,9 @@ func updateProfile(res http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			http.Error(res, "Internal server error", http.StatusInternalServerError)
 		}
+
+		currentTime := time.Now()
+		mapHistory[myUser.Username].Enqueue(queue.History{fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), "Updated Profile"})
 
 		// redirect to main index
 		http.Redirect(res, req, "/", http.StatusSeeOther)
@@ -308,6 +346,12 @@ func signup(res http.ResponseWriter, req *http.Request) {
 			}
 			http.SetCookie(res, myCookie)
 			mapSessions[myCookie.Value] = username
+
+			if _, ok := mapHistory[myUser.Username]; !ok {
+				mapHistory[username] = &queue.Queue{}
+			}
+			currentTime := time.Now()
+			mapHistory[username].Enqueue(queue.History{fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), "Sign up"})
 			bPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
 			if err != nil {
 				http.Error(res, "Internal server error", http.StatusInternalServerError)
@@ -362,6 +406,13 @@ func login(res http.ResponseWriter, req *http.Request) {
 		}
 		http.SetCookie(res, myCookie)
 		mapSessions[myCookie.Value] = username
+
+		if _, ok := mapHistory[myUser.Username]; !ok {
+			mapHistory[username] = &queue.Queue{}
+		}
+		currentTime := time.Now()
+		mapHistory[username].Enqueue(queue.History{fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), "Login"})
+
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
 	}
@@ -374,6 +425,9 @@ func logout(res http.ResponseWriter, req *http.Request) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
 	}
+
+	myUser := getUserFromCookie(res, req)
+
 	myCookie, _ := req.Cookie("myCookie")
 	// delete the session
 	delete(mapSessions, myCookie.Value)
@@ -384,6 +438,10 @@ func logout(res http.ResponseWriter, req *http.Request) {
 		MaxAge: -1,
 	}
 	http.SetCookie(res, myCookie)
+
+	currentTime := time.Now()
+	mapHistory[myUser.Username].Enqueue(queue.History{fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), "Logout"})
+
 	http.Redirect(res, req, "/", http.StatusSeeOther)
 }
 

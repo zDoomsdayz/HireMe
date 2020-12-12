@@ -18,9 +18,14 @@
         position: absolute;
         z-index: 10;
         border-right: 1px solid black;
-        width: 300px;
+        width: 350px;
         height: 100%;
         background-color: #ededed;
+      }
+
+      h2 {
+        display:inline;
+        padding: 5px;
       }
 
       /* Optional: Makes the sample page fill the window. */
@@ -81,38 +86,39 @@
 
   <form method="GET">
     <div id="test">
-    {{if (ne .MyUser.Username "")}}
-      <h3><a href="/updateProfile">Update Profile</a></h3>
-      <h3><a href="/logout">Logout</a></h3>
-    {{else}}
-      <h3><a href="/signup">Sign Up</a></h3>
-      <h3><a href="/login">Log in</a></h3>
-    {{end}}
+      {{if (ne .MyUser.Username "")}}
+        <h2><a href="/updateProfile">Update Profile</a></h2>
+        <h2><a href="/activity">Activity</a></h2>
+        <h2><a href="/logout">Logout</a></h2>
+      {{else}}
+        <h2><a href="/signup">Sign Up</a></h2>
+        <h2><a href="/login">Log in</a></h2>
+      {{end}}
+      <br><br>
+      <label> Looking For:</label><br>
+      {{range .Type}}
+          <input type="checkbox" name="Type" value="{{.}}">
+          <label for="{{.}}"> {{.}}</label><br>
+      {{end}}<br>
 
-    <label> Looking For:</label><br>
-    {{range .Type}}
-        <input type="checkbox" name="Type" value="{{.}}">
-        <label for="{{.}}"> {{.}}</label><br>
-    {{end}}<br>
+      <label> Skills:</label><br>
+      {{range .Category}}
+          <input type="checkbox" name="Category" value="{{.}}">
+          <label for="{{.}}"> {{.}}</label><br>
+      {{end}}<br>
 
-    <label> Skills:</label><br>
-    {{range .Category}}
-        <input type="checkbox" name="Category" value="{{.}}">
-        <label for="{{.}}"> {{.}}</label><br>
-    {{end}}<br>
+      <label for ="exp">Minimum Years of Experience:</label>
+      <input type="text" name="exp"><br><br>
 
-    <label for ="exp">Minimum Years of Experience:</label>
-    <input type="text" name="exp"><br><br>
+      <label> Unemployed more than:</label><br>
+      <input type="radio" name="uDays" value="30">30 Days<br>
+      <input type="radio" name="uDays" value="60">60 Days<br>
+      <input type="radio" name="uDays" value="90">90 Days<br><br>
 
-    <label> Unemployed more than:</label><br>
-    <input type="radio" name="uDays" value="30">30 Days<br>
-    <input type="radio" name="uDays" value="60">60 Days<br>
-    <input type="radio" name="uDays" value="90">90 Days<br><br>
+      <label for ="keyword">Keyword:</label>
+      <input type="text" name="keyword" placeholder="Search Keyword"><br><br>
 
-    <label for ="keyword">Keyword:</label>
-    <input type="text" name="keyword" placeholder="Search Keyword"><br><br>
-
-    <input type="submit" value="Apply">
+      <input type="submit" value="Apply">
 
     </div>
   </form>
