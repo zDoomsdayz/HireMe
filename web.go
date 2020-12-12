@@ -16,13 +16,16 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/teojiahao/HireMe/pkg/database"
 	"github.com/teojiahao/HireMe/pkg/queue"
+	"github.com/teojiahao/HireMe/pkg/security"
 
 	"github.com/joho/godotenv"
 	uuid "github.com/satori/go.uuid"
-	"github.com/teojiahao/HireMe/pkg/security"
 	"golang.org/x/crypto/bcrypt"
 	"googlemaps.github.io/maps"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 var (
@@ -60,7 +63,7 @@ func index(res http.ResponseWriter, req *http.Request) {
 	myUser := getUserFromCookie(res, req)
 
 	userJSON := getUsers("", "")
-	filterUser := map[string]UserJSON{}
+	filterUser := map[string]database.UserJSON{}
 	err := json.Unmarshal([]byte(userJSON), &filterUser)
 	if err != nil {
 		fmt.Println(err)
@@ -146,8 +149,8 @@ func index(res http.ResponseWriter, req *http.Request) {
 	}
 
 	data := struct {
-		MyUser      User
-		AllUser     map[string]UserJSON
+		MyUser      database.User
+		AllUser     map[string]database.UserJSON
 		Type        []string
 		Category    []string
 		GoogleAPI   string
@@ -245,9 +248,23 @@ func updateProfile(res http.ResponseWriter, req *http.Request) {
 				return
 			}
 
-			jsonValue, _ = json.Marshal(User{myUser.Username, []byte{}, options, x, y, strings.Join(jobType, ","), strings.Join(category, ","), exp, lastDay, message, email})
+			jsonValue, _ = json.Marshal(database.User{
+				Username:       myUser.Username,
+				Display:        options,
+				CoordX:         x,
+				CoordY:         y,
+				JobType:        strings.Join(jobType, ", "),
+				Skill:          strings.Join(category, ", "),
+				Exp:            exp,
+				UnemployedDate: lastDay,
+				Message:        message,
+				Email:          email,
+			})
 		} else {
-			jsonValue, _ = json.Marshal(User{myUser.Username, []byte{}, options, 0, 0, "", "", 0, "", "", ""})
+			jsonValue, _ = json.Marshal(database.User{
+				Username: myUser.Username,
+				Display:  options,
+			})
 		}
 
 		request, err := http.NewRequest(http.MethodPut, baseURL+"/"+myUser.Username, bytes.NewBuffer(jsonValue))
@@ -321,7 +338,7 @@ func signup(res http.ResponseWriter, req *http.Request) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
 	}
-	var myUser User
+	var myUser database.User
 	// process form submission
 	if req.Method == http.MethodPost {
 		// get form values
@@ -330,7 +347,7 @@ func signup(res http.ResponseWriter, req *http.Request) {
 		//postal := req.FormValue("postal")
 		if username != "" {
 
-			mapUsers := GetUser()
+			mapUsers := database.GetUser()
 
 			// check if username exist/ taken
 			if _, ok := mapUsers[username]; ok {
@@ -358,7 +375,10 @@ func signup(res http.ResponseWriter, req *http.Request) {
 				return
 			}
 			// save the user details into DB
-			jsonValue, _ := json.Marshal(User{username, bPassword, "", 0, 0, "", "", 0, "", "", ""})
+			jsonValue, _ := json.Marshal(database.User{
+				Username: myUser.Username,
+				Password: bPassword,
+			})
 			_, err = http.Post(baseURL+"/"+username, "application/json", bytes.NewBuffer(jsonValue))
 			if err != nil {
 				http.Error(res, "Internal server error", http.StatusInternalServerError)
@@ -383,7 +403,7 @@ func login(res http.ResponseWriter, req *http.Request) {
 		password := req.FormValue("password")
 		// check if User exist with username
 
-		mapUsers := GetUser()
+		mapUsers := database.GetUser()
 
 		myUser, ok := mapUsers[username]
 		if !ok {
@@ -446,7 +466,7 @@ func logout(res http.ResponseWriter, req *http.Request) {
 }
 
 // check if cookie exist
-func getUserFromCookie(res http.ResponseWriter, req *http.Request) User {
+func getUserFromCookie(res http.ResponseWriter, req *http.Request) database.User {
 	// get current session cookie
 	myCookie, err := req.Cookie("myCookie")
 	if err != nil {
@@ -460,8 +480,8 @@ func getUserFromCookie(res http.ResponseWriter, req *http.Request) User {
 
 	// if the User exists already, get User
 
-	mapUsers := GetUser()
-	var myUser User
+	mapUsers := database.GetUser()
+	var myUser database.User
 	if username, ok := mapSessions[myCookie.Value]; ok {
 		myUser = mapUsers[username]
 	}
@@ -475,7 +495,7 @@ func alreadyLoggedIn(req *http.Request) bool {
 		return false
 	}
 
-	mapUsers := GetUser()
+	mapUsers := database.GetUser()
 
 	username := mapSessions[myCookie.Value]
 	_, ok := mapUsers[username]

@@ -6,11 +6,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/teojiahao/HireMe/pkg/database"
 )
-
-type courseInfo struct {
-	Title string `json:"Title"`
-}
 
 // check if the user provide key and check if the key exsit inside db
 /*func validKey(req *http.Request) bool {
@@ -29,7 +26,7 @@ func allUsers(res http.ResponseWriter, req *http.Request) {
 		return
 	}*/
 
-	json.NewEncoder(res).Encode(UserInfoJSON())
+	json.NewEncoder(res).Encode(database.UserInfoJSON())
 }
 
 // individual course which require GET PUT POST and DELETE method to access
@@ -44,7 +41,7 @@ func user(res http.ResponseWriter, req *http.Request) {
 
 	if req.Method == "GET" {
 		// Get all courses from DB
-		users := UserInfoJSON()
+		users := database.UserInfoJSON()
 
 		// Check if the course exist then send it back as a JSON
 		if _, ok := users[params["username"]]; ok {
@@ -66,7 +63,7 @@ func user(res http.ResponseWriter, req *http.Request) {
 
 	if req.Header.Get("Content-type") == "application/json" {
 		if req.Method == "POST" {
-			var newUser User
+			var newUser database.User
 			reqBody, err := ioutil.ReadAll(req.Body)
 
 			if err == nil {
@@ -80,7 +77,7 @@ func user(res http.ResponseWriter, req *http.Request) {
 				}
 
 				// Attempt to Add course into DB
-				err = InsertUser(string(params["username"]), newUser.Password)
+				err = database.InsertUser(string(params["username"]), newUser.Password)
 				if err != nil {
 					res.WriteHeader(http.StatusConflict)
 					res.Write([]byte("409 - Duplicate username"))
@@ -95,7 +92,7 @@ func user(res http.ResponseWriter, req *http.Request) {
 		}
 
 		if req.Method == "PUT" {
-			var newUser User
+			var newUser database.User
 			reqBody, err := ioutil.ReadAll(req.Body)
 			if err == nil {
 				json.Unmarshal(reqBody, &newUser)
@@ -104,7 +101,7 @@ func user(res http.ResponseWriter, req *http.Request) {
 					res.Write([]byte("422 - Please supply user information in JSON format"))
 					return
 				}
-				UpdateUser(newUser.Username, newUser.Display, newUser.CoordX, newUser.CoordY, newUser.JobType, newUser.Skill, newUser.Exp, newUser.UnemployedDate, newUser.Message, newUser.Email)
+				database.UpdateUser(newUser.Username, newUser.Display, newUser.CoordX, newUser.CoordY, newUser.JobType, newUser.Skill, newUser.Exp, newUser.UnemployedDate, newUser.Message, newUser.Email)
 
 			} else {
 				res.WriteHeader(http.StatusUnprocessableEntity)

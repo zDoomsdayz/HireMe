@@ -1,17 +1,15 @@
-package main
+package database
 
 import (
 	"database/sql"
 	"fmt"
 	"os"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
 // User struct for db
 type User struct {
-	Username       string `json:"Username"`
-	Password       []byte `json:"Pass"`
+	Username       string
+	Password       []byte
 	Display        string
 	CoordX         float64
 	CoordY         float64
