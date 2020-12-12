@@ -45,11 +45,20 @@ func TestQueue(t *testing.T) {
 		})
 
 		gob.It("should get all history", func() {
+			// history after enqueue
 			for i := 1; i <= 10; i++ {
 				history.Enqueue(History{"2006-01-02 3:04PM", fmt.Sprintf("%v", i)})
 				allHistory := history.AllHistory()
 				gob.Assert(len(allHistory)).Equal(i)
 				gob.Assert(allHistory[i-1]).Equal(History{"2006-01-02 3:04PM", fmt.Sprintf("%v", i)})
+			}
+
+			// history after dequeue
+			for i := 1; i <= 10; i++ {
+				allHistory := history.AllHistory()
+				pop, _ := history.Dequeue()
+				gob.Assert(len(allHistory)).Equal(11 - i)
+				gob.Assert(pop).Equal(History{"2006-01-02 3:04PM", fmt.Sprintf("%v", i)})
 			}
 		})
 	})
