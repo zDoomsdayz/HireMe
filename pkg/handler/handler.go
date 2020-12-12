@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"bytes"
@@ -16,16 +16,14 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/teojiahao/HireMe/pkg/database"
 	"github.com/teojiahao/HireMe/pkg/queue"
 	"github.com/teojiahao/HireMe/pkg/security"
 
-	"github.com/joho/godotenv"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 	"googlemaps.github.io/maps"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
 var (
@@ -48,6 +46,8 @@ func init() {
 	jobType = []string{"Full–time", "Part-time", "Contractor", "Internship"}
 	jobCategory = []string{"Restaurant and Hospitality", "Sales and Retail", "Education", "Admin and Office", "Healthcare", "Cleaning and Facilities", "Transportation and Logistics", "Manufacturing and Warehouse", "Customer Service", "Personal Care and Services", "Art, Fashion and Design", "Human Resources", "Advertising and Marketing", "Management", "Accounting and Finance", "Business Operations", "Protective Services", "Science and Engineering", "Animal Care", "Computer and IT", "Sports Fitness and Recreation", "Installation, Maintenance and Repair", "Legal", "Media, Communications and Writing", "Construction", "Entertainment and Travel", "Farming and Outdoors", "Energy and Mining", "Property", "Social Services and Non-Profit"}
 	sort.Strings(jobCategory)
+
+	tpl = template.Must(template.ParseGlob("templates/*"))
 }
 
 func checkSubstrings(str string, subs []string) bool {
@@ -59,7 +59,8 @@ func checkSubstrings(str string, subs []string) bool {
 	return false
 }
 
-func index(res http.ResponseWriter, req *http.Request) {
+// Index page is the main feature of this application
+func Index(res http.ResponseWriter, req *http.Request) {
 	myUser := getUserFromCookie(res, req)
 
 	userJSON := getUsers("", "")
@@ -167,6 +168,7 @@ func index(res http.ResponseWriter, req *http.Request) {
 	tpl.ExecuteTemplate(res, "index.gohtml", data)
 }
 
+// reverse the slice of history for html display
 func reverse(history []queue.History) []queue.History {
 	for i, j := 0, len(history)-1; i < j; i, j = i+1, j-1 {
 		history[i], history[j] = history[j], history[i]
@@ -174,7 +176,8 @@ func reverse(history []queue.History) []queue.History {
 	return history
 }
 
-func activity(res http.ResponseWriter, req *http.Request) {
+// Activity page
+func Activity(res http.ResponseWriter, req *http.Request) {
 	myUser := getUserFromCookie(res, req)
 	allActivity := []queue.History{}
 
@@ -185,7 +188,8 @@ func activity(res http.ResponseWriter, req *http.Request) {
 	tpl.ExecuteTemplate(res, "activity.gohtml", reverse(allActivity))
 }
 
-func updateProfile(res http.ResponseWriter, req *http.Request) {
+// UpdateProfile page helps user to plot on the google map with its details
+func UpdateProfile(res http.ResponseWriter, req *http.Request) {
 
 	myUser := getUserFromCookie(res, req)
 
@@ -332,8 +336,8 @@ func getUsers(code, key string) string {
 	return ""
 }
 
-// signup page
-func signup(res http.ResponseWriter, req *http.Request) {
+// Signup page create an account and store it into database
+func Signup(res http.ResponseWriter, req *http.Request) {
 	if alreadyLoggedIn(req) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
@@ -391,8 +395,8 @@ func signup(res http.ResponseWriter, req *http.Request) {
 	tpl.ExecuteTemplate(res, "signup.gohtml", myUser)
 }
 
-// login page
-func login(res http.ResponseWriter, req *http.Request) {
+// Login page checks for user input with database
+func Login(res http.ResponseWriter, req *http.Request) {
 	if alreadyLoggedIn(req) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
@@ -439,8 +443,8 @@ func login(res http.ResponseWriter, req *http.Request) {
 	tpl.ExecuteTemplate(res, "login.gohtml", nil)
 }
 
-// logout page
-func logout(res http.ResponseWriter, req *http.Request) {
+// Logout page remove the cookies from the browser
+func Logout(res http.ResponseWriter, req *http.Request) {
 	if !alreadyLoggedIn(req) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
