@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -33,6 +34,8 @@ var (
 	jobType     []string
 	jobCategory []string
 	mapHistory  = map[string]*queue.Queue{}
+	mapMutex    sync.RWMutex
+	wg          sync.WaitGroup
 )
 
 // init load up env file
@@ -59,6 +62,12 @@ func checkSubstrings(str string, subs []string) bool {
 	return false
 }
 
+func safeMapDelete(filterUser map[string]database.UserJSON, username string) {
+	mapMutex.Lock()
+	delete(filterUser, username)
+	mapMutex.Unlock()
+}
+
 // Index page is the main feature of this application
 func Index(res http.ResponseWriter, req *http.Request) {
 	myUser := getUserFromCookie(res, req)
@@ -74,74 +83,110 @@ func Index(res http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
 	if len(req.Form["Type"]) > 0 {
 		jType := req.Form["Type"]
-
-		for k, v := range filterUser {
-			if !checkSubstrings(v.JobType, jType) {
-				delete(filterUser, k)
+		wg.Add(1)
+		go func() {
+			mapMutex.RLock()
+			for k, v := range filterUser {
+				if !checkSubstrings(v.JobType, jType) {
+					mapMutex.RUnlock()
+					safeMapDelete(filterUser, k)
+					mapMutex.RLock()
+				}
 			}
-		}
-		activity += strings.Join(jType, ", ") + " "
+			activity += strings.Join(jType, ", ") + " "
+
+			mapMutex.RUnlock()
+			wg.Done()
+		}()
 	}
 
 	if len(req.Form["Category"]) > 0 {
 		cat := req.Form["Category"]
-
-		for k, v := range filterUser {
-			if !checkSubstrings(v.Skill, cat) {
-				delete(filterUser, k)
+		wg.Add(1)
+		go func() {
+			mapMutex.RLock()
+			for k, v := range filterUser {
+				if !checkSubstrings(v.Skill, cat) {
+					mapMutex.RUnlock()
+					safeMapDelete(filterUser, k)
+					mapMutex.RLock()
+				}
 			}
-		}
 
-		activity += strings.Join(cat, ", ") + " "
+			activity += strings.Join(cat, ", ") + " "
+			mapMutex.RUnlock()
+			wg.Done()
+		}()
 	}
 
 	if req.FormValue("exp") != "" {
 		exp, _ := strconv.Atoi(req.FormValue("exp"))
-
-		for k, v := range filterUser {
-			if v.Exp < exp {
-				delete(filterUser, k)
+		wg.Add(1)
+		go func() {
+			mapMutex.RLock()
+			for k, v := range filterUser {
+				if v.Exp < exp {
+					mapMutex.RUnlock()
+					safeMapDelete(filterUser, k)
+					mapMutex.RLock()
+				}
 			}
-		}
-		activity += req.FormValue("exp") + "Years Of Exp "
+			activity += req.FormValue("exp") + "Years Of Exp "
+			mapMutex.RUnlock()
+			wg.Done()
+		}()
 	}
 
 	if req.FormValue("uDays") != "" {
 		uDays, _ := strconv.Atoi(req.FormValue("uDays"))
+		wg.Add(1)
+		go func() {
+			mapMutex.RLock()
+			for k, v := range filterUser {
+				if v.UnemployedDate != "" {
+					then, err := time.Parse("2006-01-02", v.UnemployedDate)
+					if err != nil {
+						fmt.Println(err)
+						return
+					}
+					duration := time.Since(then)
+					durationDays := int(duration.Hours() / 24)
 
-		for k, v := range filterUser {
-			if v.UnemployedDate != "" {
-				then, err := time.Parse("2006-01-02", v.UnemployedDate)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-				duration := time.Since(then)
-				durationDays := int(duration.Hours() / 24)
+					dateToDays := v
+					dateToDays.UnemployedDate = fmt.Sprintf("%s (%v Days)", v.UnemployedDate, durationDays)
+					filterUser[k] = dateToDays
 
-				dateToDays := v
-				dateToDays.UnemployedDate = fmt.Sprintf("%s (%v Days)", v.UnemployedDate, durationDays)
-				filterUser[k] = dateToDays
-
-				if durationDays < uDays {
-					delete(filterUser, k)
+					if durationDays < uDays {
+						mapMutex.RUnlock()
+						safeMapDelete(filterUser, k)
+						mapMutex.RLock()
+					}
 				}
 			}
-		}
-		activity += req.FormValue("uDays") + "Days unemployed"
+			activity += req.FormValue("uDays") + "Days unemployed"
+			mapMutex.RUnlock()
+			wg.Done()
+		}()
 	}
 
 	if req.FormValue("keyword") != "" {
 		keyword := req.FormValue("keyword")
-
-		for k, v := range filterUser {
-			if !strings.Contains(strings.ToLower(v.Message), strings.ToLower(keyword)) {
-				delete(filterUser, k)
+		wg.Add(1)
+		go func() {
+			mapMutex.RLock()
+			for k, v := range filterUser {
+				if !strings.Contains(strings.ToLower(v.Message), strings.ToLower(keyword)) {
+					mapMutex.RUnlock()
+					safeMapDelete(filterUser, k)
+					mapMutex.RLock()
+				}
 			}
-		}
-		activity += req.FormValue("keyword")
+			activity += req.FormValue("keyword") + " "
+			mapMutex.RUnlock()
+			wg.Done()
+		}()
 	}
-
+	wg.Wait()
 	if len(req.Form["Type"]) > 0 || len(req.Form["Category"]) > 0 || req.FormValue("exp") != "" || req.FormValue("uDays") != "" || req.FormValue("keyword") != "" {
 		if _, ok := mapHistory[myUser.Username]; ok {
 			currentTime := time.Now()
