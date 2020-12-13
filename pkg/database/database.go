@@ -52,11 +52,11 @@ func InsertUser(username string, pass []byte, errChan chan error) {
 	var mutex sync.Mutex
 	db := OpenSQL()
 	defer db.Close()
-	query := fmt.Sprintf("INSERT INTO Users VALUES ('%s', '%s', '%s', '%v', '%v', '%s', '%s', '%v', '%s', '%s', '%s')", username, pass, "No", 0, 0, "", "", 0, "", "", "")
-
+	query := fmt.Sprintf("INSERT INTO Users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 	mutex.Lock()
 	defer mutex.Unlock()
-	_, err := db.Query(query)
+	statement, _ := db.Prepare(query)
+	_, err := statement.Exec(username, pass, "No", 0, 0, "", "", 0, "", "", "")
 	if err != nil {
 		errChan <- fmt.Errorf("409 - Duplicate Username")
 		return
@@ -68,9 +68,9 @@ func InsertUser(username string, pass []byte, errChan chan error) {
 func UpdateUser(username string, display string, coordX, coordY float64, jobType string, skill string, exp int, unemployedDate string, message string, email string) {
 	db := OpenSQL()
 	defer db.Close()
-	query := fmt.Sprintf("UPDATE Users SET Display='%s', CoordX='%v', CoordY='%v', JobType='%s', Skill='%s', Exp='%v', UnemployedDate='%s', Message='%s', Email='%s' WHERE Username='%s'", display, coordX, coordY, jobType, skill, exp, unemployedDate, message, email, username)
+	query := fmt.Sprintf("UPDATE Users SET Display='%s', CoordX='%v', CoordY='%v', JobType='%s', Skill='%s', Exp='%v', UnemployedDate='%s', Message='%s', Email='%s' WHERE Username=?", display, coordX, coordY, jobType, skill, exp, unemployedDate, message, email)
 
-	_, err := db.Query(query)
+	_, err := db.Query(query, username)
 
 	if err != nil {
 		panic(err.Error())
