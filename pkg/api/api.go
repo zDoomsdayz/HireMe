@@ -52,20 +52,10 @@ func User(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	/*if req.Method == "DELETE" {
-		// Attempt to delete the course in DB
-		err := DeleteRecord(string(params["courseid"]))
-		if err != nil {
-			res.WriteHeader(http.StatusNotFound)
-			res.Write([]byte("404 - No course found!"))
-		}
-	}*/
-
 	if req.Header.Get("Content-type") == "application/json" {
 		if req.Method == "POST" {
 			var newUser database.User
 			reqBody, err := ioutil.ReadAll(req.Body)
-
 			if err == nil {
 				json.Unmarshal(reqBody, &newUser)
 
@@ -76,8 +66,10 @@ func User(res http.ResponseWriter, req *http.Request) {
 					return
 				}
 
-				// Attempt to Add course into DB
-				err = database.InsertUser(string(params["username"]), newUser.Password)
+				// Attempt to Add user into DB
+				insertChan := make(chan error)
+				go database.InsertUser(string(params["username"]), newUser.Password, insertChan)
+				err = <-insertChan
 				if err != nil {
 					res.WriteHeader(http.StatusConflict)
 					res.Write([]byte("409 - Duplicate username"))

@@ -425,12 +425,15 @@ func Signup(res http.ResponseWriter, req *http.Request) {
 			}
 			// save the user details into DB
 			jsonValue, _ := json.Marshal(database.User{
-				Username: myUser.Username,
+				Username: username,
 				Password: bPassword,
 			})
-			_, err = http.Post(baseURL+"/"+username, "application/json", bytes.NewBuffer(jsonValue))
+			jsonResp, err := http.Post(baseURL+"/"+username, "application/json", bytes.NewBuffer(jsonValue))
 			if err != nil {
 				http.Error(res, "Internal server error", http.StatusInternalServerError)
+			}
+			if jsonResp.StatusCode == 409 {
+				http.Error(res, "Username already taken", http.StatusForbidden)
 			}
 		}
 		// redirect to main index

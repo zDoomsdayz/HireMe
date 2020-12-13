@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"sync"
 )
 
 // User struct for db
@@ -47,17 +48,20 @@ func OpenSQL() *sql.DB {
 }
 
 // InsertUser takes in the username, password and key and store into db
-func InsertUser(username string, pass []byte) error {
+func InsertUser(username string, pass []byte, errChan chan error) {
+	var mutex sync.Mutex
 	db := OpenSQL()
 	defer db.Close()
 	query := fmt.Sprintf("INSERT INTO Users VALUES ('%s', '%s', '%s', '%v', '%v', '%s', '%s', '%v', '%s', '%s', '%s')", username, pass, "No", 0, 0, "", "", 0, "", "", "")
 
+	mutex.Lock()
+	defer mutex.Unlock()
 	_, err := db.Query(query)
 	if err != nil {
-		//panic(err.Error())
-		return fmt.Errorf("409 - Duplicate Username")
+		errChan <- fmt.Errorf("409 - Duplicate Username")
+		return
 	}
-	return nil
+	errChan <- nil
 }
 
 // UpdateUser takes in the username, password and key and store into db
