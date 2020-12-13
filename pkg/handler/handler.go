@@ -403,6 +403,25 @@ func Signup(res http.ResponseWriter, req *http.Request) {
 				http.Error(res, "Username already taken", http.StatusForbidden)
 				return
 			}
+			bPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
+			if err != nil {
+				http.Error(res, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+			// save the user details into DB
+			jsonValue, _ := json.Marshal(database.User{
+				Username: username,
+				Password: bPassword,
+			})
+			jsonResp, err := http.Post(baseURL+"/"+username, "application/json", bytes.NewBuffer(jsonValue))
+			if err != nil {
+				http.Error(res, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+			if jsonResp.StatusCode == 409 {
+				http.Error(res, "Username already taken", http.StatusForbidden)
+				return
+			}
 
 			// create session
 			id := uuid.NewV4()
@@ -418,23 +437,6 @@ func Signup(res http.ResponseWriter, req *http.Request) {
 			}
 			currentTime := time.Now()
 			mapHistory[username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Sign up"})
-			bPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
-			if err != nil {
-				http.Error(res, "Internal server error", http.StatusInternalServerError)
-				return
-			}
-			// save the user details into DB
-			jsonValue, _ := json.Marshal(database.User{
-				Username: username,
-				Password: bPassword,
-			})
-			jsonResp, err := http.Post(baseURL+"/"+username, "application/json", bytes.NewBuffer(jsonValue))
-			if err != nil {
-				http.Error(res, "Internal server error", http.StatusInternalServerError)
-			}
-			if jsonResp.StatusCode == 409 {
-				http.Error(res, "Username already taken", http.StatusForbidden)
-			}
 		}
 		// redirect to main index
 		http.Redirect(res, req, "/updateProfile", http.StatusSeeOther)
