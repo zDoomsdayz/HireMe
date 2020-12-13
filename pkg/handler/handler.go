@@ -76,7 +76,7 @@ func Index(res http.ResponseWriter, req *http.Request) {
 	filterUser := map[string]database.UserJSON{}
 	err := json.Unmarshal([]byte(userJSON), &filterUser)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 
 	activity := ""
@@ -146,7 +146,7 @@ func Index(res http.ResponseWriter, req *http.Request) {
 				if v.UnemployedDate != "" {
 					then, err := time.Parse("2006-01-02", v.UnemployedDate)
 					if err != nil {
-						fmt.Println(err)
+						log.Println(err)
 						return
 					}
 					duration := time.Since(then)
@@ -280,7 +280,7 @@ func UpdateProfile(res http.ResponseWriter, req *http.Request) {
 			// check if selected date valid
 			then, err := time.Parse("2006-01-02", lastDay)
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 				return
 			}
 			duration := time.Since(then)
@@ -371,7 +371,7 @@ func getUsers(code, key string) string {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	response, err := http.Get(url)
 	if err != nil {
-		fmt.Println("Error")
+		log.Println("Error")
 	} else {
 		data, _ := ioutil.ReadAll(response.Body)
 		//fmt.Println(string(data))

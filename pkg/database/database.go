@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 )
@@ -40,7 +41,7 @@ func OpenSQL() *sql.DB {
 	db, err := sql.Open("mysql", os.Getenv("DATABASE_IP"))
 
 	if err != nil {
-		panic(err.Error())
+		log.Panic(err.Error())
 	} /*else {
 		fmt.Println("Database opened!")
 	}*/
@@ -73,7 +74,7 @@ func UpdateUser(username string, display string, coordX, coordY float64, jobType
 	_, err := db.Query(query, username)
 
 	if err != nil {
-		panic(err.Error())
+		log.Panic(fmt.Sprintf("%s", err.Error()))
 	}
 }
 
@@ -85,7 +86,7 @@ func GetUser() map[string]User {
 	users := map[string]User{}
 
 	if err != nil {
-		panic(err.Error)
+		log.Panic(fmt.Sprintf("%s", err.Error()))
 	}
 	for results.Next() {
 		var user User
@@ -106,13 +107,13 @@ func UserInfoJSON() map[string]UserJSON {
 	users := map[string]UserJSON{}
 
 	if err != nil {
-		panic(err.Error)
+		log.Panic(fmt.Sprintf("%s", err.Error()))
 	}
 	for results.Next() {
 		var user User
 		err := results.Scan(&user.Username, &user.Password, &user.Display, &user.CoordX, &user.CoordY, &user.JobType, &user.Skill, &user.Exp, &user.UnemployedDate, &user.Message, &user.Email)
 		if err != nil {
-			panic(err.Error)
+			log.Panic(fmt.Sprintf("%s", err.Error()))
 		}
 		if user.Display == "Yes" {
 			users[user.Username] = UserJSON{user.Username, user.CoordX, user.CoordY, user.JobType, user.Skill, user.Exp, user.UnemployedDate, user.Message, user.Email}

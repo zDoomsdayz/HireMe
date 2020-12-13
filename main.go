@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -32,6 +31,6 @@ func main() {
 	router.HandleFunc("/api/v1/users", api.AllUsers)
 	router.HandleFunc("/api/v1/users/{username}", api.User).Methods("GET", "PUT", "POST", "DELETE")
 
-	fmt.Println("Listening at port", os.Getenv("PORT"))
+	log.Println("Listening at port", os.Getenv("PORT"))
 	log.Fatal(http.ListenAndServeTLS(":"+os.Getenv("PORT"), "cert/cert.pem", "cert/key.pem", router))
 }
