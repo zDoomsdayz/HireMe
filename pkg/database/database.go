@@ -78,8 +78,8 @@ func UpdateUser(username string, display string, coordX, coordY float64, jobType
 	}
 }
 
-// GetUser get all the users details in db and return back a map of user
-func GetUser() map[string]User {
+// GetAllUser get all the users details in db and return back a map of user
+func GetAllUser() map[string]User {
 	db := OpenSQL()
 	defer db.Close()
 	results, err := db.Query("Select * from my_db.Users")

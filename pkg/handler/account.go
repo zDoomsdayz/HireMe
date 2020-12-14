@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -87,7 +88,7 @@ func Login(res http.ResponseWriter, req *http.Request) {
 		username := bm.Sanitize(req.FormValue("username"))
 		password := bm.Sanitize(req.FormValue("password"))
 
-		//check for ASCII
+		// check for ASCII
 		if !security.IsASCII(username) || !security.IsASCII(password) {
 			http.Error(res, "ASCII Character only", http.StatusForbidden)
 			return
@@ -114,6 +115,13 @@ func Login(res http.ResponseWriter, req *http.Request) {
 			http.Error(res, "Username and/or password do not match", http.StatusForbidden)
 			return
 		}
+
+		// get encrypted key from API
+		key, _ := ioutil.ReadAll(jsonResp.Body)
+		jsonResp.Body.Close()
+		fmt.Println("Original Message:" + string(key))
+		secretKey, _ := security.Decrypt(key, "")
+		fmt.Println("Decrypted Message:" + string(secretKey))
 
 		// create session
 		id := uuid.NewV4()

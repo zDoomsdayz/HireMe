@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/teojiahao/HireMe/pkg/security"
+
 	"github.com/gorilla/mux"
 	"github.com/teojiahao/HireMe/pkg/database"
 	"golang.org/x/crypto/bcrypt"
@@ -36,7 +38,7 @@ func Login(res http.ResponseWriter, req *http.Request) {
 				}
 
 				// Get all user from db
-				dbAllUser := database.GetUser()
+				dbAllUser := database.GetAllUser()
 				// check if user exist in the db
 				dbUser, ok := dbAllUser[user.Username]
 				if !ok {
@@ -52,6 +54,10 @@ func Login(res http.ResponseWriter, req *http.Request) {
 					res.Write([]byte("403 - Username and/or password do not match"))
 					return
 				}
+
+				// write something back to user
+				secretKey, _ := security.Encrypt([]byte(dbUser.Username), "")
+				res.Write(secretKey)
 
 			} else {
 				res.WriteHeader(http.StatusUnprocessableEntity)
@@ -84,7 +90,7 @@ func User(res http.ResponseWriter, req *http.Request) {
 
 	if req.Method == "GET" {
 		// Get all user from DB
-		users := database.GetUser()
+		users := database.GetAllUser()
 
 		// Check if user exist
 		if _, ok := users[params["username"]]; ok {
@@ -106,7 +112,7 @@ func User(res http.ResponseWriter, req *http.Request) {
 				// Only accept a proper JSON format
 				if newUser.Username == "" {
 					res.WriteHeader(http.StatusUnprocessableEntity)
-					res.Write([]byte("422 - Please supply course information in JSON format"))
+					res.Write([]byte("422 - Please supply user information in JSON format"))
 					return
 				}
 
@@ -143,7 +149,7 @@ func User(res http.ResponseWriter, req *http.Request) {
 				database.UpdateUser(newUser.Username, newUser.Display, newUser.CoordX, newUser.CoordY, newUser.JobType, newUser.Skill, newUser.Exp, newUser.UnemployedDate, newUser.Message, newUser.Email)
 			} else {
 				res.WriteHeader(http.StatusUnprocessableEntity)
-				res.Write([]byte("422 - Please supply course information in JSON format"))
+				res.Write([]byte("422 - Please supply user information in JSON format"))
 			}
 		}
 	}
