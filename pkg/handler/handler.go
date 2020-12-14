@@ -455,14 +455,26 @@ func Login(res http.ResponseWriter, req *http.Request) {
 	}
 	// process form submission
 	if req.Method == http.MethodPost {
+		timer := make(chan string, 1)
+		go func() {
+			time.Sleep(1 * time.Second)
+			timer <- "times up"
+		}()
+
 		username := bm.Sanitize(req.FormValue("username"))
 		password := bm.Sanitize(req.FormValue("password"))
-		// check if User exist with username
+
+		//check for ASCII
+		if !security.IsASCII(username) || !security.IsASCII(password) {
+			http.Error(res, "ASCII Character only", http.StatusForbidden)
+			return
+		}
 
 		mapUsers := database.GetUser()
-
+		// check if User exist with username
 		myUser, ok := mapUsers[username]
 		if !ok {
+			<-timer
 			http.Error(res, "Username and/or password do not match", http.StatusForbidden)
 			return
 		}
@@ -474,10 +486,10 @@ func Login(res http.ResponseWriter, req *http.Request) {
 		// Matching of password entered
 		err := bcrypt.CompareHashAndPassword(myUser.Password, []byte(password))
 		if err != nil {
-
 			currentTime := time.Now()
-			http.Error(res, "Username and/or password do not match", http.StatusForbidden)
 			mapHistory[username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: `<p style="color:red;">Failed to login</p>`})
+			<-timer
+			http.Error(res, "Username and/or password do not match", http.StatusForbidden)
 			return
 		}
 		// create session
