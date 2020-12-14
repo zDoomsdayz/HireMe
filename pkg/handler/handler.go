@@ -461,15 +461,21 @@ func Login(res http.ResponseWriter, req *http.Request) {
 
 		myUser, ok := mapUsers[username]
 		if !ok {
-			http.Error(res, "Username and/or password do not match", http.
-				StatusForbidden)
+			http.Error(res, "Username and/or password do not match", http.StatusForbidden)
 			return
 		}
+
+		if _, ok := mapHistory[myUser.Username]; !ok {
+			mapHistory[username] = &queue.Queue{}
+		}
+
 		// Matching of password entered
 		err := bcrypt.CompareHashAndPassword(myUser.Password, []byte(password))
 		if err != nil {
-			http.Error(res, "Username and/or password do not match", http.
-				StatusForbidden)
+
+			currentTime := time.Now()
+			http.Error(res, "Username and/or password do not match", http.StatusForbidden)
+			mapHistory[username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Failed to login"})
 			return
 		}
 		// create session
@@ -481,11 +487,8 @@ func Login(res http.ResponseWriter, req *http.Request) {
 		http.SetCookie(res, myCookie)
 		mapSessions[myCookie.Value] = username
 
-		if _, ok := mapHistory[myUser.Username]; !ok {
-			mapHistory[username] = &queue.Queue{}
-		}
 		currentTime := time.Now()
-		mapHistory[username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Login"})
+		mapHistory[username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Successfully login"})
 
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
