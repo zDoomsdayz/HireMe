@@ -22,6 +22,7 @@ import (
 	"github.com/teojiahao/HireMe/pkg/queue"
 	"github.com/teojiahao/HireMe/pkg/security"
 
+	"github.com/microcosm-cc/bluemonday"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 	"googlemaps.github.io/maps"
@@ -36,6 +37,7 @@ var (
 	mapHistory  = map[string]*queue.Queue{}
 	mapMutex    sync.RWMutex
 	wg          sync.WaitGroup
+	bm          = bluemonday.UGCPolicy()
 )
 
 // init load up env file
@@ -120,7 +122,7 @@ func Index(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if req.FormValue("exp") != "" {
-		exp, _ := strconv.Atoi(req.FormValue("exp"))
+		exp, _ := strconv.Atoi(bm.Sanitize(req.FormValue("exp")))
 		wg.Add(1)
 		go func() {
 			mapMutex.RLock()
@@ -131,7 +133,7 @@ func Index(res http.ResponseWriter, req *http.Request) {
 					mapMutex.RLock()
 				}
 			}
-			activity += req.FormValue("exp") + "Years Of Exp "
+			activity += bm.Sanitize(req.FormValue("exp")) + "Years Of Exp "
 			mapMutex.RUnlock()
 			wg.Done()
 		}()
@@ -170,7 +172,7 @@ func Index(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if req.FormValue("keyword") != "" {
-		keyword := req.FormValue("keyword")
+		keyword := bm.Sanitize(req.FormValue("keyword"))
 		wg.Add(1)
 		go func() {
 			mapMutex.RLock()
@@ -181,7 +183,7 @@ func Index(res http.ResponseWriter, req *http.Request) {
 					mapMutex.RLock()
 				}
 			}
-			activity += req.FormValue("keyword") + " "
+			activity += keyword + " "
 			mapMutex.RUnlock()
 			wg.Done()
 		}()
@@ -243,13 +245,13 @@ func UpdateProfile(res http.ResponseWriter, req *http.Request) {
 		jsonValue := []byte{}
 		if options == "Yes" {
 			req.ParseForm()
-			postal := req.FormValue("postal")
+			postal := bm.Sanitize(req.FormValue("postal"))
 			jobType := req.Form["Type"]
 			category := req.Form["Category"]
-			exp, _ := strconv.Atoi(req.FormValue("exp"))
-			lastDay := req.FormValue("lastDay")
-			message := req.FormValue("message")
-			email := req.FormValue("email")
+			exp, _ := strconv.Atoi(bm.Sanitize(req.FormValue("exp")))
+			lastDay := bm.Sanitize(req.FormValue("lastDay"))
+			message := bm.Sanitize(req.FormValue("message"))
+			email := bm.Sanitize(req.FormValue("email"))
 
 			// check if postal code valid
 			x, y, err := getCoordFromPostal(postal)
@@ -391,8 +393,8 @@ func Signup(res http.ResponseWriter, req *http.Request) {
 	// process form submission
 	if req.Method == http.MethodPost {
 		// get form values
-		username := req.FormValue("username")
-		password := req.FormValue("password")
+		username := bm.Sanitize(req.FormValue("username"))
+		password := bm.Sanitize(req.FormValue("password"))
 		//postal := req.FormValue("postal")
 		if username != "" {
 
@@ -453,8 +455,8 @@ func Login(res http.ResponseWriter, req *http.Request) {
 	}
 	// process form submission
 	if req.Method == http.MethodPost {
-		username := req.FormValue("username")
-		password := req.FormValue("password")
+		username := bm.Sanitize(req.FormValue("username"))
+		password := bm.Sanitize(req.FormValue("password"))
 		// check if User exist with username
 
 		mapUsers := database.GetUser()
@@ -475,7 +477,7 @@ func Login(res http.ResponseWriter, req *http.Request) {
 
 			currentTime := time.Now()
 			http.Error(res, "Username and/or password do not match", http.StatusForbidden)
-			mapHistory[username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Failed to login"})
+			mapHistory[username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: `<p style="color:red;">Failed to login</p>`})
 			return
 		}
 		// create session
@@ -488,7 +490,7 @@ func Login(res http.ResponseWriter, req *http.Request) {
 		mapSessions[myCookie.Value] = username
 
 		currentTime := time.Now()
-		mapHistory[username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Successfully login"})
+		mapHistory[username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: `<p style="color:green;">Successfully login</p>`})
 
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
