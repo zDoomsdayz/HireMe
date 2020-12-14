@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -14,34 +15,25 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Signup page create an account and store it into database
+// Signup page send a POST to REST API
 func Signup(res http.ResponseWriter, req *http.Request) {
 	if alreadyLoggedIn(req) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
 	}
-	var myUser database.User
 	// process form submission
 	if req.Method == http.MethodPost {
 		// get form values
 		username := bm.Sanitize(req.FormValue("username"))
 		password := bm.Sanitize(req.FormValue("password"))
-		//postal := req.FormValue("postal")
+
 		if username != "" {
-
-			mapUsers := database.GetUser()
-
-			// check if username exist/ taken
-			if _, ok := mapUsers[username]; ok {
-				http.Error(res, "Username already taken", http.StatusForbidden)
-				return
-			}
 			bPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
 			if err != nil {
 				http.Error(res, "Internal server error", http.StatusInternalServerError)
 				return
 			}
-			// save the user details into DB
+			// send user details to API
 			jsonValue, _ := json.Marshal(database.User{
 				Username: username,
 				Password: bPassword,
@@ -65,7 +57,7 @@ func Signup(res http.ResponseWriter, req *http.Request) {
 			http.SetCookie(res, myCookie)
 			mapSessions[myCookie.Value] = username
 
-			if _, ok := mapHistory[myUser.Username]; !ok {
+			if _, ok := mapHistory[username]; !ok {
 				mapHistory[username] = &queue.Queue{}
 			}
 			currentTime := time.Now()
@@ -75,10 +67,10 @@ func Signup(res http.ResponseWriter, req *http.Request) {
 		http.Redirect(res, req, "/updateProfile", http.StatusSeeOther)
 		return
 	}
-	tpl.ExecuteTemplate(res, "signup.gohtml", myUser)
+	tpl.ExecuteTemplate(res, "signup.gohtml", nil)
 }
 
-// Login page checks for user input with database
+// Login page send a POST to REST API
 func Login(res http.ResponseWriter, req *http.Request) {
 	if alreadyLoggedIn(req) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
@@ -101,28 +93,28 @@ func Login(res http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		mapUsers := database.GetUser()
-		// check if User exist with username
-		myUser, ok := mapUsers[username]
-		if !ok {
-			<-timer
-			http.Error(res, "Username and/or password do not match", http.StatusForbidden)
+		// send user details to API
+		jsonValue, _ := json.Marshal(database.User{
+			Username: username,
+			Password: []byte(password),
+		})
+		jsonResp, err := http.Post("https://localhost:5000/api/v1/login", "application/json", bytes.NewBuffer(jsonValue))
+		if err != nil {
+			log.Println(err)
+			http.Error(res, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-
-		if _, ok := mapHistory[myUser.Username]; !ok {
-			mapHistory[username] = &queue.Queue{}
-		}
-
-		// Matching of password entered
-		err := bcrypt.CompareHashAndPassword(myUser.Password, []byte(password))
-		if err != nil {
+		if jsonResp.StatusCode == 403 {
 			currentTime := time.Now()
+			if _, ok := mapHistory[username]; !ok {
+				mapHistory[username] = &queue.Queue{}
+			}
 			mapHistory[username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: `<p style="color:red;">Failed to login</p>`})
 			<-timer
 			http.Error(res, "Username and/or password do not match", http.StatusForbidden)
 			return
 		}
+
 		// create session
 		id := uuid.NewV4()
 		myCookie := &http.Cookie{
@@ -133,6 +125,9 @@ func Login(res http.ResponseWriter, req *http.Request) {
 		mapSessions[myCookie.Value] = username
 
 		currentTime := time.Now()
+		if _, ok := mapHistory[username]; !ok {
+			mapHistory[username] = &queue.Queue{}
+		}
 		mapHistory[username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: `<p style="color:green;">Successfully login</p>`})
 
 		http.Redirect(res, req, "/", http.StatusSeeOther)
@@ -162,13 +157,13 @@ func Logout(res http.ResponseWriter, req *http.Request) {
 	http.SetCookie(res, myCookie)
 
 	currentTime := time.Now()
-	mapHistory[myUser.Username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Logout"})
+	mapHistory[myUser].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Logout"})
 
 	http.Redirect(res, req, "/", http.StatusSeeOther)
 }
 
 // check if cookie exist
-func getUserFromCookie(res http.ResponseWriter, req *http.Request) database.User {
+func getUserFromCookie(res http.ResponseWriter, req *http.Request) string {
 	// get current session cookie
 	myCookie, err := req.Cookie("myCookie")
 	if err != nil {
@@ -180,14 +175,12 @@ func getUserFromCookie(res http.ResponseWriter, req *http.Request) database.User
 		http.SetCookie(res, myCookie)
 	}
 
-	// if the User exists already, get User
-
-	mapUsers := database.GetUser()
-	var myUser database.User
-	if username, ok := mapSessions[myCookie.Value]; ok {
-		myUser = mapUsers[username]
+	// if the User exists already, get username
+	username, ok := mapSessions[myCookie.Value]
+	if !ok {
+		return ""
 	}
-	return myUser
+	return username
 }
 
 // check if user already logged in
@@ -196,10 +189,14 @@ func alreadyLoggedIn(req *http.Request) bool {
 	if err != nil {
 		return false
 	}
-
-	mapUsers := database.GetUser()
-
 	username := mapSessions[myCookie.Value]
-	_, ok := mapUsers[username]
-	return ok
+	// send user details to API
+	response, err := http.Get(baseURL + "/" + username)
+	if err != nil {
+		return false
+	}
+	if response.StatusCode == 404 {
+		return false
+	}
+	return true
 }

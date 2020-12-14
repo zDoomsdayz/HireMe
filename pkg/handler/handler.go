@@ -51,6 +51,7 @@ func init() {
 	sort.Strings(jobCategory)
 
 	tpl = template.Must(template.ParseGlob("templates/*"))
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 }
 
 func checkSubstrings(str string, subs []string) bool {
@@ -188,14 +189,14 @@ func Index(res http.ResponseWriter, req *http.Request) {
 	}
 	wg.Wait()
 	if len(req.Form["Type"]) > 0 || len(req.Form["Category"]) > 0 || req.FormValue("exp") != "" || req.FormValue("uDays") != "" || req.FormValue("keyword") != "" {
-		if _, ok := mapHistory[myUser.Username]; ok {
+		if _, ok := mapHistory[myUser]; ok {
 			currentTime := time.Now()
-			mapHistory[myUser.Username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Filter: " + activity})
+			mapHistory[myUser].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Filter: " + activity})
 		}
 	}
 
 	data := struct {
-		MyUser      database.User
+		MyUser      string
 		AllUser     map[string]database.UserJSON
 		Type        []string
 		Category    []string
@@ -226,8 +227,8 @@ func Activity(res http.ResponseWriter, req *http.Request) {
 	myUser := getUserFromCookie(res, req)
 	allActivity := []queue.History{}
 
-	if _, ok := mapHistory[myUser.Username]; ok {
-		allActivity = mapHistory[myUser.Username].AllHistory()
+	if _, ok := mapHistory[myUser]; ok {
+		allActivity = mapHistory[myUser].AllHistory()
 	}
 
 	tpl.ExecuteTemplate(res, "activity.gohtml", reverse(allActivity))
@@ -298,7 +299,7 @@ func UpdateProfile(res http.ResponseWriter, req *http.Request) {
 			}
 
 			jsonValue, _ = json.Marshal(database.User{
-				Username:       myUser.Username,
+				Username:       myUser,
 				Display:        options,
 				CoordX:         x,
 				CoordY:         y,
@@ -311,12 +312,11 @@ func UpdateProfile(res http.ResponseWriter, req *http.Request) {
 			})
 		} else {
 			jsonValue, _ = json.Marshal(database.User{
-				Username: myUser.Username,
+				Username: myUser,
 				Display:  options,
 			})
 		}
-
-		request, err := http.NewRequest(http.MethodPut, baseURL+"/"+myUser.Username, bytes.NewBuffer(jsonValue))
+		request, err := http.NewRequest(http.MethodPatch, baseURL+"/"+myUser, bytes.NewBuffer(jsonValue))
 		request.Header.Set("Content-Type", "application/json")
 		client := &http.Client{}
 		_, err = client.Do(request)
@@ -325,7 +325,7 @@ func UpdateProfile(res http.ResponseWriter, req *http.Request) {
 		}
 
 		currentTime := time.Now()
-		mapHistory[myUser.Username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Updated Profile"})
+		mapHistory[myUser].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Updated Profile"})
 
 		// redirect to main index
 		http.Redirect(res, req, "/", http.StatusSeeOther)
@@ -353,10 +353,10 @@ func getCoordFromPostal(postal string) (float64, float64, error) {
 		Region:  "SG",
 	}
 	resp, err := c.Geocode(context.Background(), r)
-	if len(resp) > 0 {
-		return resp[0].Geometry.Location.Lat, resp[0].Geometry.Location.Lng, nil
+	if len(resp) == 0 {
+		return 0, 0, fmt.Errorf("invalid postal code")
 	}
-	return 0, 0, fmt.Errorf("invalid postal code")
+	return resp[0].Geometry.Location.Lat, resp[0].Geometry.Location.Lng, nil
 }
 
 // Accessing the REST API and return back the JSON as string
@@ -368,15 +368,13 @@ func getUsers(code, key string) string {
 	} else {
 		url = baseURL + "?key=" + key
 	}
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
 	response, err := http.Get(url)
 	if err != nil {
-		log.Println("Error")
-	} else {
-		data, _ := ioutil.ReadAll(response.Body)
-		//fmt.Println(string(data))
-		response.Body.Close()
-		return string(data)
+		log.Println("Error:", err)
+		return ""
 	}
-	return ""
+	data, _ := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	return string(data)
 }

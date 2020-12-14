@@ -28,8 +28,9 @@ func main() {
 	router.HandleFunc("/login", handler.Login)
 	router.HandleFunc("/logout", handler.Logout)
 
+	router.HandleFunc("/api/v1/login", api.Login).Methods("POST")
 	router.HandleFunc("/api/v1/users", api.AllUsers)
-	router.HandleFunc("/api/v1/users/{username}", api.User).Methods("GET", "PUT", "POST", "DELETE")
+	router.HandleFunc("/api/v1/users/{username}", api.User).Methods("GET", "PUT", "POST", "DELETE", "PATCH")
 
 	log.Println("Listening at port", os.Getenv("PORT"))
 	log.Fatal(http.ListenAndServeTLS(":"+os.Getenv("PORT"), "cert/cert.pem", "cert/key.pem", router))

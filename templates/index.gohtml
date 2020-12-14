@@ -51,7 +51,7 @@
           addMarker({
             coords:{lat:{{.CoordX}},lng:{{.CoordY}}}, 
             content:'Looking For: {{.JobType}}<br>Skill: {{.Skill}}<br>Years of Experience: {{.Exp}}<br>Unemployed Since: {{.UnemployedDate}}<br>Message: {{.Message}}<br>Email: {{.Email}}',
-            {{if eq .Username $.MyUser.Username}}
+            {{if eq .Username $.MyUser}}
               iconImage:'https://cdn.discordapp.com/emojis/785888573328457728.png?v=1'
             {{else}}
               iconImage:'https://cdn.discordapp.com/emojis/785883192539217961.png?v=1'
@@ -86,7 +86,7 @@
 
   <form method="GET">
     <div id="test">
-      {{if (ne .MyUser.Username "")}}
+      {{if (ne .MyUser "")}}
         <h2><a href="/updateProfile">Update Profile</a></h2>
         <h2><a href="/activity">Activity</a></h2>
         <h2><a href="/logout">Logout</a></h2>

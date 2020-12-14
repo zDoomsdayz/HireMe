@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/teojiahao/HireMe/pkg/database"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // check if the user provide key and check if the key exsit inside db
@@ -17,6 +18,48 @@ import (
 	}
 	return false
 }*/
+
+// Login func
+func Login(res http.ResponseWriter, req *http.Request) {
+	if req.Header.Get("Content-type") == "application/json" {
+		if req.Method == "POST" {
+			var user database.User
+			reqBody, err := ioutil.ReadAll(req.Body)
+			if err == nil {
+				json.Unmarshal(reqBody, &user)
+
+				// Only accept a proper JSON format
+				if user.Username == "" {
+					res.WriteHeader(http.StatusUnprocessableEntity)
+					res.Write([]byte("422 - Please supply course information in JSON format"))
+					return
+				}
+
+				// Get all user from db
+				dbAllUser := database.GetUser()
+				// check if user exist in the db
+				dbUser, ok := dbAllUser[user.Username]
+				if !ok {
+					res.WriteHeader(http.StatusForbidden)
+					res.Write([]byte("403 - Username and/or password do not match"))
+					return
+				}
+
+				// compare the password with the db password
+				err := bcrypt.CompareHashAndPassword(dbUser.Password, user.Password)
+				if err != nil {
+					res.WriteHeader(http.StatusForbidden)
+					res.Write([]byte("403 - Username and/or password do not match"))
+					return
+				}
+
+			} else {
+				res.WriteHeader(http.StatusUnprocessableEntity)
+				res.Write([]byte("422 - Please supply User information in JSON format"))
+			}
+		}
+	}
+}
 
 // display all courses in JSON format
 func AllUsers(res http.ResponseWriter, req *http.Request) {
@@ -40,15 +83,16 @@ func User(res http.ResponseWriter, req *http.Request) {
 	params := mux.Vars(req)
 
 	if req.Method == "GET" {
-		// Get all courses from DB
-		users := database.UserInfoJSON()
+		// Get all user from DB
+		users := database.GetUser()
 
-		// Check if the course exist then send it back as a JSON
+		// Check if user exist
 		if _, ok := users[params["username"]]; ok {
-			json.NewEncoder(res).Encode(users[params["username"]])
+			res.WriteHeader(http.StatusOK)
+			res.Write([]byte("200 - User found!"))
 		} else {
 			res.WriteHeader(http.StatusNotFound)
-			res.Write([]byte("404 - No course found!"))
+			res.Write([]byte("404 - No user found!"))
 		}
 	}
 
@@ -83,18 +127,20 @@ func User(res http.ResponseWriter, req *http.Request) {
 			}
 		}
 
-		if req.Method == "PUT" {
+		if req.Method == "PATCH" {
 			var newUser database.User
 			reqBody, err := ioutil.ReadAll(req.Body)
 			if err == nil {
 				json.Unmarshal(reqBody, &newUser)
+
+				// Only accept a proper JSON format
 				if newUser.Username == "" {
 					res.WriteHeader(http.StatusUnprocessableEntity)
 					res.Write([]byte("422 - Please supply user information in JSON format"))
 					return
 				}
+				// connect to db and update it
 				database.UpdateUser(newUser.Username, newUser.Display, newUser.CoordX, newUser.CoordY, newUser.JobType, newUser.Skill, newUser.Exp, newUser.UnemployedDate, newUser.Message, newUser.Email)
-
 			} else {
 				res.WriteHeader(http.StatusUnprocessableEntity)
 				res.Write([]byte("422 - Please supply course information in JSON format"))
