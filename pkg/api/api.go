@@ -56,8 +56,7 @@ func Login(res http.ResponseWriter, req *http.Request) {
 				}
 
 				// write something back to user
-				secretKey, _ := security.Encrypt(dbUser.AccessKey, "")
-				res.Write(secretKey)
+				res.Write(dbUser.AccessKey)
 
 			} else {
 				res.WriteHeader(http.StatusUnprocessableEntity)

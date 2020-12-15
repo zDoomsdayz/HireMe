@@ -150,5 +150,6 @@ func CheckAPIKey(key string) bool {
 			return true
 		}
 	}
+	log.Println("Invalid Accesskey:", key)
 	return false
 }
