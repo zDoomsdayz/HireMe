@@ -87,13 +87,13 @@ func HashPassword(password, pepper string) ([]byte, error) {
 }
 
 // HashPasswordCompare decrypt first then sha512 the password and then compare with bcrypt
-func HashPasswordCompare(password, pepper string, encryptedHash []byte) error {
+func HashPasswordCompare(password []byte, pepper string, encryptedHash []byte) error {
 	decryptHash, err := Decrypt(encryptedHash, pepper)
 	if err != nil {
 		return err
 	}
 	hash := sha512.New()
-	hash.Write([]byte(password))
+	hash.Write(password)
 
 	err = bcrypt.CompareHashAndPassword(decryptHash, hash.Sum(nil))
 	if err != nil {

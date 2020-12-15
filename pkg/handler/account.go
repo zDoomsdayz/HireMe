@@ -13,7 +13,6 @@ import (
 	"github.com/teojiahao/HireMe/pkg/database"
 	"github.com/teojiahao/HireMe/pkg/queue"
 	"github.com/teojiahao/HireMe/pkg/security"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // Signup page send a POST to REST API
@@ -29,7 +28,7 @@ func Signup(res http.ResponseWriter, req *http.Request) {
 		password := bm.Sanitize(req.FormValue("password"))
 
 		if username != "" {
-			bPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
+			hashPassword, err := security.HashPassword(password, "")
 			if err != nil {
 				http.Error(res, "Internal server error", http.StatusInternalServerError)
 				return
@@ -37,7 +36,7 @@ func Signup(res http.ResponseWriter, req *http.Request) {
 			// send user details to API
 			jsonValue, _ := json.Marshal(database.User{
 				Username: username,
-				Password: bPassword,
+				Password: hashPassword,
 			})
 			jsonResp, err := http.Post(baseURL+"/"+username, "application/json", bytes.NewBuffer(jsonValue))
 			if err != nil {

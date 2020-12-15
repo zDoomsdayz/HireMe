@@ -9,7 +9,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/teojiahao/HireMe/pkg/database"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // check if the user provide key and check if the key exsit inside db
@@ -48,7 +47,7 @@ func Login(res http.ResponseWriter, req *http.Request) {
 				}
 
 				// compare the password with the db password
-				err := bcrypt.CompareHashAndPassword(dbUser.Password, user.Password)
+				err := security.HashPasswordCompare(user.Password, "", dbUser.Password)
 				if err != nil {
 					res.WriteHeader(http.StatusForbidden)
 					res.Write([]byte("403 - Username and/or password do not match"))

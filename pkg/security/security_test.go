@@ -45,9 +45,9 @@ func TestSecurity(t *testing.T) {
 		gob.It("should hash a password", func() {
 			pw1, _ := HashPassword("abc123", "")
 			pw2, _ := HashPassword("123asd", "123")
-			gob.Assert(HashPasswordCompare("abc123", "", pw1)).Equal(nil)
-			gob.Assert(HashPasswordCompare("123asd", "123", pw2)).Equal(nil)
-			gob.Assert(HashPasswordCompare("123asd", "123", pw1)).IsNotNil()
+			gob.Assert(HashPasswordCompare([]byte("abc123"), "", pw1)).Equal(nil)
+			gob.Assert(HashPasswordCompare([]byte("123asd"), "123", pw2)).Equal(nil)
+			gob.Assert(HashPasswordCompare([]byte("123asd"), "123", pw1)).IsNotNil()
 		})
 	})
 }
