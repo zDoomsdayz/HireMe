@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	uuid "github.com/satori/go.uuid"
 	"github.com/teojiahao/HireMe/pkg/security"
 
 	"github.com/gorilla/mux"
@@ -12,13 +13,13 @@ import (
 )
 
 // check if the user provide key and check if the key exsit inside db
-/*func validKey(req *http.Request) bool {
+func validKey(req *http.Request) bool {
 	v := req.URL.Query()
-	if key, ok := v["key"]; ok {
-		return CheckAPIKey(key[0])
+	if key, ok := v["accessKey"]; ok {
+		return database.CheckAPIKey(key[0])
 	}
 	return false
-}*/
+}
 
 // Login func
 func Login(res http.ResponseWriter, req *http.Request) {
@@ -55,7 +56,7 @@ func Login(res http.ResponseWriter, req *http.Request) {
 				}
 
 				// write something back to user
-				secretKey, _ := security.Encrypt([]byte(dbUser.Username), "")
+				secretKey, _ := security.Encrypt(dbUser.AccessKey, "")
 				res.Write(secretKey)
 
 			} else {
@@ -115,17 +116,24 @@ func User(res http.ResponseWriter, req *http.Request) {
 					return
 				}
 
+				// Generate a accesskey
+				key := uuid.NewV4()
+				secretKey, _ := security.Encrypt([]byte(key.String()), "")
+
 				// Attempt to Add user into DB
 				insertChan := make(chan error)
-				go database.InsertUser(string(params["username"]), newUser.Password, insertChan)
+				go database.InsertUser(string(params["username"]), newUser.Password, secretKey, insertChan)
 				err = <-insertChan
 				if err != nil {
 					res.WriteHeader(http.StatusConflict)
 					res.Write([]byte("409 - Duplicate username"))
-				} else {
-					res.WriteHeader(http.StatusCreated)
-					res.Write([]byte("201 - User added: " + params["username"]))
+					return
 				}
+
+				// Give user a key
+				res.WriteHeader(http.StatusCreated)
+				res.Write(secretKey)
+
 			} else {
 				res.WriteHeader(http.StatusUnprocessableEntity)
 				res.Write([]byte("422 - Please supply User information in JSON format"))
@@ -133,6 +141,12 @@ func User(res http.ResponseWriter, req *http.Request) {
 		}
 
 		if req.Method == "PATCH" {
+			if !validKey(req) {
+				res.WriteHeader(http.StatusNotFound)
+				res.Write([]byte("404 - invalid key!"))
+				return
+			}
+
 			var newUser database.User
 			reqBody, err := ioutil.ReadAll(req.Body)
 			if err == nil {

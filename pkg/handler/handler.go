@@ -28,7 +28,7 @@ import (
 
 var (
 	tpl         *template.Template
-	mapSessions = map[string]string{}
+	mapSessions = map[string]Session{}
 	baseURL     string
 	jobType     []string
 	jobCategory []string
@@ -37,6 +37,11 @@ var (
 	wg          sync.WaitGroup
 	bm          = bluemonday.UGCPolicy()
 )
+
+type Session struct {
+	Username  string
+	Accesskey string
+}
 
 // init load up env file
 func init() {
@@ -189,9 +194,9 @@ func Index(res http.ResponseWriter, req *http.Request) {
 	}
 	wg.Wait()
 	if len(req.Form["Type"]) > 0 || len(req.Form["Category"]) > 0 || req.FormValue("exp") != "" || req.FormValue("uDays") != "" || req.FormValue("keyword") != "" {
-		if _, ok := mapHistory[myUser]; ok {
+		if _, ok := mapHistory[myUser.Username]; ok {
 			currentTime := time.Now()
-			mapHistory[myUser].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Filter: " + activity})
+			mapHistory[myUser.Username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Filter: " + activity})
 		}
 	}
 
@@ -203,7 +208,7 @@ func Index(res http.ResponseWriter, req *http.Request) {
 		GoogleAPI   string
 		GoogleMapID string
 	}{
-		myUser,
+		myUser.Username,
 		filterUser,
 		jobType,
 		jobCategory,
@@ -227,8 +232,8 @@ func Activity(res http.ResponseWriter, req *http.Request) {
 	myUser := getUserFromCookie(res, req)
 	allActivity := []queue.History{}
 
-	if _, ok := mapHistory[myUser]; ok {
-		allActivity = mapHistory[myUser].AllHistory()
+	if _, ok := mapHistory[myUser.Username]; ok {
+		allActivity = mapHistory[myUser.Username].AllHistory()
 	}
 
 	tpl.ExecuteTemplate(res, "activity.gohtml", reverse(allActivity))
@@ -299,7 +304,7 @@ func UpdateProfile(res http.ResponseWriter, req *http.Request) {
 			}
 
 			jsonValue, _ = json.Marshal(database.User{
-				Username:       myUser,
+				Username:       myUser.Username,
 				Display:        options,
 				CoordX:         x,
 				CoordY:         y,
@@ -312,11 +317,12 @@ func UpdateProfile(res http.ResponseWriter, req *http.Request) {
 			})
 		} else {
 			jsonValue, _ = json.Marshal(database.User{
-				Username: myUser,
+				Username: myUser.Username,
 				Display:  options,
 			})
 		}
-		request, err := http.NewRequest(http.MethodPatch, baseURL+"/"+myUser, bytes.NewBuffer(jsonValue))
+
+		request, err := http.NewRequest(http.MethodPatch, baseURL+"/"+myUser.Username+"?accessKey="+myUser.Accesskey, bytes.NewBuffer(jsonValue))
 		request.Header.Set("Content-Type", "application/json")
 		client := &http.Client{}
 		_, err = client.Do(request)
@@ -325,7 +331,7 @@ func UpdateProfile(res http.ResponseWriter, req *http.Request) {
 		}
 
 		currentTime := time.Now()
-		mapHistory[myUser].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Updated Profile"})
+		mapHistory[myUser.Username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Updated Profile"})
 
 		// redirect to main index
 		http.Redirect(res, req, "/", http.StatusSeeOther)
@@ -364,9 +370,9 @@ func getUsers(code, key string) string {
 	url := baseURL
 
 	if code != "" {
-		url = baseURL + "/" + code + "?key=" + key
+		url = baseURL + "/" + code + "?accessKey=" + key
 	} else {
-		url = baseURL + "?key=" + key
+		url = baseURL + "?accessKey=" + key
 	}
 
 	response, err := http.Get(url)

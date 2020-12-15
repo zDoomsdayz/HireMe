@@ -48,6 +48,11 @@ func Signup(res http.ResponseWriter, req *http.Request) {
 				return
 			}
 
+			// get encrypted key from API
+			key, _ := ioutil.ReadAll(jsonResp.Body)
+			jsonResp.Body.Close()
+			secretKey, _ := security.Decrypt(key, "")
+
 			// create session
 			id := uuid.NewV4()
 			myCookie := &http.Cookie{
@@ -55,7 +60,7 @@ func Signup(res http.ResponseWriter, req *http.Request) {
 				Value: id.String(),
 			}
 			http.SetCookie(res, myCookie)
-			mapSessions[myCookie.Value] = username
+			mapSessions[myCookie.Value] = Session{username, string(secretKey)}
 
 			if _, ok := mapHistory[username]; !ok {
 				mapHistory[username] = &queue.Queue{}
@@ -118,9 +123,7 @@ func Login(res http.ResponseWriter, req *http.Request) {
 		// get encrypted key from API
 		key, _ := ioutil.ReadAll(jsonResp.Body)
 		jsonResp.Body.Close()
-		fmt.Println("Original Message:" + string(key))
 		secretKey, _ := security.Decrypt(key, "")
-		fmt.Println("Decrypted Message:" + string(secretKey))
 
 		// create session
 		id := uuid.NewV4()
@@ -129,7 +132,7 @@ func Login(res http.ResponseWriter, req *http.Request) {
 			Value: id.String(),
 		}
 		http.SetCookie(res, myCookie)
-		mapSessions[myCookie.Value] = username
+		mapSessions[myCookie.Value] = Session{username, string(secretKey)}
 
 		currentTime := time.Now()
 		if _, ok := mapHistory[username]; !ok {
@@ -164,13 +167,13 @@ func Logout(res http.ResponseWriter, req *http.Request) {
 	http.SetCookie(res, myCookie)
 
 	currentTime := time.Now()
-	mapHistory[myUser].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Logout"})
+	mapHistory[myUser.Username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: "Logout"})
 
 	http.Redirect(res, req, "/", http.StatusSeeOther)
 }
 
 // check if cookie exist
-func getUserFromCookie(res http.ResponseWriter, req *http.Request) string {
+func getUserFromCookie(res http.ResponseWriter, req *http.Request) Session {
 	// get current session cookie
 	myCookie, err := req.Cookie("myCookie")
 	if err != nil {
@@ -185,7 +188,7 @@ func getUserFromCookie(res http.ResponseWriter, req *http.Request) string {
 	// if the User exists already, get username
 	username, ok := mapSessions[myCookie.Value]
 	if !ok {
-		return ""
+		return username
 	}
 	return username
 }
@@ -196,9 +199,9 @@ func alreadyLoggedIn(req *http.Request) bool {
 	if err != nil {
 		return false
 	}
-	username := mapSessions[myCookie.Value]
+	session := mapSessions[myCookie.Value]
 	// send user details to API
-	response, err := http.Get(baseURL + "/" + username)
+	response, err := http.Get(baseURL + "/" + session.Username)
 	if err != nil {
 		return false
 	}

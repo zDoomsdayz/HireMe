@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
+
+	"github.com/teojiahao/HireMe/pkg/security"
 )
 
 // User struct for db
@@ -21,6 +24,7 @@ type User struct {
 	UnemployedDate string
 	Message        string
 	Email          string
+	AccessKey      []byte
 }
 
 // UserJSON for RESTAPI
@@ -49,15 +53,15 @@ func OpenSQL() *sql.DB {
 }
 
 // InsertUser takes in the username, password and key and store into db
-func InsertUser(username string, pass []byte, errChan chan error) {
+func InsertUser(username string, pass []byte, key []byte, errChan chan error) {
 	var mutex sync.Mutex
 	db := OpenSQL()
 	defer db.Close()
-	query := fmt.Sprintf("INSERT INTO Users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+	query := fmt.Sprintf("INSERT INTO Users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 	mutex.Lock()
 	defer mutex.Unlock()
 	statement, _ := db.Prepare(query)
-	_, err := statement.Exec(username, pass, "No", 0, 0, "", "", 0, "", "", "")
+	_, err := statement.Exec(username, pass, "No", 0, 0, "", "", 0, "", "", "", key)
 	if err != nil {
 		errChan <- fmt.Errorf("409 - Duplicate Username")
 		return
@@ -90,7 +94,7 @@ func GetAllUser() map[string]User {
 	}
 	for results.Next() {
 		var user User
-		err := results.Scan(&user.Username, &user.Password, &user.Display, &user.CoordX, &user.CoordY, &user.JobType, &user.Skill, &user.Exp, &user.UnemployedDate, &user.Message, &user.Email)
+		err := results.Scan(&user.Username, &user.Password, &user.Display, &user.CoordX, &user.CoordY, &user.JobType, &user.Skill, &user.Exp, &user.UnemployedDate, &user.Message, &user.Email, &user.AccessKey)
 		if err != nil {
 			panic(err.Error)
 		}
@@ -111,7 +115,7 @@ func UserInfoJSON() map[string]UserJSON {
 	}
 	for results.Next() {
 		var user User
-		err := results.Scan(&user.Username, &user.Password, &user.Display, &user.CoordX, &user.CoordY, &user.JobType, &user.Skill, &user.Exp, &user.UnemployedDate, &user.Message, &user.Email)
+		err := results.Scan(&user.Username, &user.Password, &user.Display, &user.CoordX, &user.CoordY, &user.JobType, &user.Skill, &user.Exp, &user.UnemployedDate, &user.Message, &user.Email, &user.AccessKey)
 		if err != nil {
 			log.Panic(fmt.Sprintf("%s", err.Error()))
 		}
@@ -120,4 +124,31 @@ func UserInfoJSON() map[string]UserJSON {
 		}
 	}
 	return users
+}
+
+// CheckAPIKey checks whether the key exist in the db
+func CheckAPIKey(key string) bool {
+	db := OpenSQL()
+	defer db.Close()
+	results, err := db.Query("Select * from my_db.Users")
+
+	if err != nil {
+		panic(err.Error)
+	}
+
+	// check if the user key is inside db
+	for results.Next() {
+		var user User
+		err := results.Scan(&user.Username, &user.Password, &user.Display, &user.CoordX, &user.CoordY, &user.JobType, &user.Skill, &user.Exp, &user.UnemployedDate, &user.Message, &user.Email, &user.AccessKey)
+		if err != nil {
+			panic(err.Error)
+		}
+
+		decryptedKey, _ := security.Decrypt(user.AccessKey, "")
+
+		if strings.Compare(string(decryptedKey), key) == 0 {
+			return true
+		}
+	}
+	return false
 }
