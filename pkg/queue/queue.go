@@ -1,3 +1,4 @@
+// Package queue is my data structure
 package queue
 
 import (

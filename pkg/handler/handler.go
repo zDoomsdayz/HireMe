@@ -38,6 +38,7 @@ var (
 	bm          = bluemonday.UGCPolicy()
 )
 
+// Session struct
 type Session struct {
 	Username  string
 	Accesskey string

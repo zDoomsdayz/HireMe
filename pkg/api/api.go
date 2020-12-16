@@ -1,3 +1,4 @@
+// Package api handle all my communication with the server
 package api
 
 import (
@@ -66,7 +67,7 @@ func Login(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// display all courses in JSON format
+// AllUsers return all the user in JSON
 func AllUsers(res http.ResponseWriter, req *http.Request) {
 	/*if !validKey(req) {
 		res.WriteHeader(http.StatusNotFound)
@@ -77,7 +78,7 @@ func AllUsers(res http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(res).Encode(database.UserInfoJSON())
 }
 
-// individual course which require GET PUT POST and DELETE method to access
+// User func
 func User(res http.ResponseWriter, req *http.Request) {
 	/*if !validKey(req) {
 		res.WriteHeader(http.StatusNotFound)

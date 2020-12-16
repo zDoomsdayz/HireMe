@@ -1,3 +1,4 @@
+// Package database handle all my database connection
 package database
 
 import (
