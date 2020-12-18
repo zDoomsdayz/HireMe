@@ -22,7 +22,7 @@
     * ```docker
       docker run --name JiaHao_SQL -p 32769:3306 -e MYSQL_ROOT_PASSWORD=password -d mysql:latest
     * Using MySQL workbench to create database, Port 32769
-    * ![SQL](screenshots/SQL.png)
+    * ![SQL](screenshots/SQL.PNG)
     * ```SQL
       CREATE database my_db;
       USE my_db;
