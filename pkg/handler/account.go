@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
@@ -113,7 +114,7 @@ func Login(res http.ResponseWriter, req *http.Request) {
 			Username: username,
 			Password: []byte(password),
 		})
-		jsonResp, err := http.Post("https://localhost:5000/api/v1/login", "application/json", bytes.NewBuffer(jsonValue))
+		jsonResp, err := http.Post(os.Getenv("LOGIN_API"), "application/json", bytes.NewBuffer(jsonValue))
 		if err != nil {
 			log.Println(err)
 			http.Error(res, "Internal server error", http.StatusInternalServerError)
