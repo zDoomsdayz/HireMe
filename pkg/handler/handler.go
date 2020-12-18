@@ -242,6 +242,10 @@ func Activity(res http.ResponseWriter, req *http.Request) {
 
 // UpdateProfile page helps user to plot on the google map with its details
 func UpdateProfile(res http.ResponseWriter, req *http.Request) {
+	if !alreadyLoggedIn(req) {
+		http.Redirect(res, req, "/", http.StatusSeeOther)
+		return
+	}
 
 	myUser := getUserFromCookie(res, req)
 

@@ -58,7 +58,7 @@ func InsertUser(username string, pass []byte, key []byte, errChan chan error) {
 	var mutex sync.Mutex
 	db := OpenSQL()
 	defer db.Close()
-	query := fmt.Sprintf("INSERT INTO Users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+	query := `INSERT INTO Users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	mutex.Lock()
 	defer mutex.Unlock()
 	statement, _ := db.Prepare(query)

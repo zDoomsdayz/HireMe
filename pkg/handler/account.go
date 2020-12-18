@@ -29,6 +29,13 @@ func Signup(res http.ResponseWriter, req *http.Request) {
 		password := bm.Sanitize(req.FormValue("password"))
 
 		if username != "" {
+			//check password
+			if err := security.CheckPassword(password); err != nil {
+				//http.Error(res, fmt.Sprintf("%v", err), http.StatusForbidden)
+				tpl.ExecuteTemplate(res, "signup.gohtml", fmt.Sprintf("%v", err))
+				return
+			}
+
 			hashPassword, err := security.HashPassword(password, "")
 			if err != nil {
 				http.Error(res, "Internal server error", http.StatusInternalServerError)
@@ -45,7 +52,8 @@ func Signup(res http.ResponseWriter, req *http.Request) {
 				return
 			}
 			if jsonResp.StatusCode == 409 {
-				http.Error(res, "Username already taken", http.StatusForbidden)
+				//http.Error(res, "Username already taken", http.StatusForbidden)
+				tpl.ExecuteTemplate(res, "signup.gohtml", "Username already taken")
 				return
 			}
 
@@ -95,7 +103,8 @@ func Login(res http.ResponseWriter, req *http.Request) {
 
 		// check for ASCII
 		if !security.IsASCII(username) || !security.IsASCII(password) {
-			http.Error(res, "ASCII Character only", http.StatusForbidden)
+			//http.Error(res, "ASCII Character only", http.StatusForbidden)
+			tpl.ExecuteTemplate(res, "login.gohtml", "ASCII Character only")
 			return
 		}
 
@@ -117,7 +126,8 @@ func Login(res http.ResponseWriter, req *http.Request) {
 			}
 			mapHistory[username].Enqueue(queue.History{Time: fmt.Sprintf(currentTime.Format("2006-01-02 3:04PM")), Activity: `<p style="color:red;">Failed to login</p>`})
 			<-timer
-			http.Error(res, "Username and/or password do not match", http.StatusForbidden)
+			//http.Error(res, "Username and/or password do not match", http.StatusForbidden)
+			tpl.ExecuteTemplate(res, "login.gohtml", "Username and/or password do not match")
 			return
 		}
 

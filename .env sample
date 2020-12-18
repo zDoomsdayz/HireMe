@@ -1,0 +1,6 @@
+PORT=<your port number>
+API=https://localhost:<your port number>/api/v1/users
+LOGIN_API=https://localhost:<your port number>/api/v1/login
+GOOGLE_API=<your google api>
+GOOGLE_MAP_ID=<your google map style id>
+DATABASE_IP=root:password@tcp(127.0.0.1:32769)/my_db

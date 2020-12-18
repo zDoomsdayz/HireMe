@@ -80,12 +80,6 @@ func AllUsers(res http.ResponseWriter, req *http.Request) {
 
 // User func
 func User(res http.ResponseWriter, req *http.Request) {
-	/*if !validKey(req) {
-		res.WriteHeader(http.StatusNotFound)
-		res.Write([]byte("404 - invalid key!"))
-		return
-	}*/
-
 	params := mux.Vars(req)
 
 	if req.Method == "GET" {
