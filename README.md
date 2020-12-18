@@ -1,4 +1,4 @@
-![Screenshot](screenshots/main.png)
+![Screenshot](screenshots/main.PNG)
 **HireMe** is a website that help unemployed people get a job and it help company to filter the right person to hire.
 
 ![feature1](screenshots/filter.gif)
